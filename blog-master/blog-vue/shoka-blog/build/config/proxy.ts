@@ -15,6 +15,7 @@ export function createViteProxy(env: Env.ImportMeta) {
 	}
 
 	const { baseURL, proxyPattern } = createServiceConfig(env);
+	console.log(baseURL, proxyPattern);
 
 	const proxy: Record<string, ProxyOptions> = createProxyItem({ baseURL, proxyPattern });
 

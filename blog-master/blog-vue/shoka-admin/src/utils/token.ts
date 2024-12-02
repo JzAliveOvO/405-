@@ -2,9 +2,6 @@ import Cookies from "js-cookie";
 
 const TokenKey: string = "Token";
 
-// 我网站的域名是www.ttkwsd.top，去前面的www，改成自己的域名
-const domain: string = ".ttkwsd.top";
-
 // token前缀
 export let token_prefix = "Bearer ";
 

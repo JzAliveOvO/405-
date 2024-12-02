@@ -1,0 +1,61 @@
+{
+  "name": "405quan",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "serve": "vue-cli-service serve",
+    "build": "vue-cli-service build",
+    "lint": "vue-cli-service lint"
+  },
+  "dependencies": {
+    "@element-plus/icons-vue": "^2.3.1",
+    "core-js": "^3.8.3",
+    "echarts": "^4.6.0",
+    "echarts-gl": "^1.1.1",
+    "element-plus": "^2.8.6",
+    "view-ui-plus": "^1.3.19",
+    "vue": "^3.2.13",
+    "vue-router": "^4.4.5",
+    "vuex": "^4.1.0"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.12.16",
+    "@babel/eslint-parser": "^7.12.16",
+    "@vue/cli-plugin-babel": "~5.0.0",
+    "@vue/cli-plugin-eslint": "~5.0.0",
+    "@vue/cli-service": "~5.0.0",
+    "babel-eslint": "^10.1.0",
+    "babel-plugin-component": "^1.1.1",
+    "compression-webpack-plugin": "^11.1.0",
+    "eslint": "^7.32.0",
+    "eslint-plugin-vue": "^8.0.3"
+  },
+  "eslintConfig": {
+    "root": true,
+    "env": {
+      "node": true
+    },
+    "extends": [
+      "plugin:vue/essential",
+      "eslint:recommended"
+    ],
+    "rules": {
+      "no-console": "off",
+      "no-unused-vars": "off",
+      "vue/no-parsing-error": [
+        2,
+        {
+          "x-invalid-end-tag": false
+        }
+      ],
+      "vue/multi-word-component-names": "off"
+    },
+    "parserOptions": {
+      "parser": "babel-eslint"
+    }
+  },
+  "browserslist": [
+    "> 1%",
+    "last 2 versions"
+  ]
+}
