@@ -22,7 +22,7 @@
 
       <!-- 右侧图标 -->
       <div class="right-icons" style="margin-right: 10px;">
-        <el-icon @click="navigateToPersonal" class="icon large-icon">
+        <el-icon @click="handleAvatarClick" class="icon large-icon">
           <Avatar />
         </el-icon>
         <el-icon @click="navigateToSet" class="icon large-icon">
@@ -30,6 +30,9 @@
         </el-icon>
       </div>
     </div>
+
+    <!-- 登录/注册弹框 -->
+    <login-dialog @login-success="onLoginSuccess" ref="loginDialog" />
   </el-header>
 </template>
 
@@ -37,16 +40,20 @@
 import { ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { House, Avatar, Setting } from '@element-plus/icons-vue';
+import LoginDialog from './LoginDialog.vue';
 
 export default {
   components: {
     House,
     Avatar,
     Setting,
+    LoginDialog,
   },
   setup() {
     const router = useRouter();
     const searchQuery = ref('');
+    const isLoggedIn = ref(localStorage.getItem('uid') !== null); // 从 localStorage 获取登录状态
+    const loginDialog = ref(null); // 创建对 loginDialog 的引用
 
     const navigateToHome = () => {
       router.push({ name: 'Home' });
@@ -60,11 +67,31 @@ export default {
       router.push({ name: 'Set' });
     };
 
+    const handleAvatarClick = () => {
+      if (isLoggedIn.value) {
+        navigateToPersonal();
+      } else {
+        // 使用 loginDialog 引用调用 openDialog 方法
+        if (loginDialog.value) {
+          loginDialog.value.openDialog();
+        }
+      }
+    };
+
+    const onLoginSuccess = () => {
+      isLoggedIn.value = true;
+      navigateToPersonal();
+    };
+
     return {
       searchQuery,
+      isLoggedIn,
       navigateToHome,
       navigateToPersonal,
       navigateToSet,
+      handleAvatarClick,
+      onLoginSuccess,
+      loginDialog, // 返回 loginDialog 引用
     };
   },
 };
@@ -123,6 +150,8 @@ export default {
   margin: 0 20px; /* 左右间距 */
 }
 </style>
+
+
 
 
 

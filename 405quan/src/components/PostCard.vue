@@ -18,10 +18,13 @@
         <Comment />
       </el-icon>
 
-      <!-- 点赞图标 -->
-      <el-icon @click="likePost" style="cursor: pointer; font-size: 24px;">
-        <StarFilled />
-      </el-icon>
+      <!-- 点赞图标和点赞数 -->
+      <div style="display: flex; align-items: center; cursor: pointer;" @click="likePost">
+        <el-icon style="font-size: 24px;">
+          <StarFilled />
+        </el-icon>
+        <span style="margin-left: 5px;">{{ localPost.likes }}</span>
+      </div>
     </div>
 
     <div v-if="showComments" class="comments-section">
@@ -32,19 +35,19 @@
         <!-- 评论输入框 -->
         <el-input v-model="newComment" placeholder="发表评论" size="large" class="comment-input" style="width: 610px; margin-left: 10px;" />
         <!-- 提交评论按钮 -->
-        <el-button  round @click="submitComment" style="margin-left: 40px; height: 40px;">评论</el-button>
+        <el-button round @click="submitComment" style="margin-left: 40px; height: 40px;">评论</el-button>
       </div>
 
       <!-- 评论列表 -->
-      <div v-for="(comment, index) in localPost.comments" :key="index" class="comment-item">
+      <div v-for="(comment, index) in localPost.comment" :key="index" class="comment-item">
         <div class="comment-header">
-          <img :src="comment.user.avatar" alt="Avatar" class="comment-avatar" style="width: 30px; height: 30px; border-radius: 50%;" />
+          <img :src="comment.avatar" alt="Avatar" class="comment-avatar" style="width: 30px; height: 30px; border-radius: 50%;" />
           <div class="comment-info">
             <div class="comment-user-info">
-              <span class="comment-user-name">{{ comment.user.name }}:</span>
-              <span class="comment-content">{{ comment.content }}</span>
+              <span class="comment-user-name">{{ comment.userName }}:</span>
+              <span class="comment-content">{{ comment.c_info }}</span>
             </div>
-            <span class="comment-time">{{ comment.time }}</span>
+            <span class="comment-time">{{ comment.c_time }}</span>
           </div>
         </div>
       </div>
@@ -53,49 +56,194 @@
 </template>
 
 <script>
-import { ref, reactive, watchEffect } from 'vue';
+import { ref, reactive, watchEffect, onMounted } from 'vue';
 
 export default {
   props: {
     post: Object
   },
   setup(props, { emit }) {
-    // 创建一个本地状态来存储 post 数据
-    const localPost = reactive({ ...props.post });
+    const currentUserAvatar = ref('');
+    const userName = ref('');
+    const localPost = reactive({
+      ...props.post,
+      comment: [],
+      likes: props.post.likes || 0 // 确保点赞数存在，默认为0
+    });
     const showComments = ref(false);
     const newComment = ref('');
-    const currentUserAvatar = ref('https://via.placeholder.com/40'); // 当前评论用户的头像
+    
+    // 获取用户信息
+    const fetchUserInfo = async () => {
+      const uid = localStorage.getItem('uid'); // 用户uid
+        if (!uid) {
+          console.error('UID 未找到');
+          return;
+        }
 
-    const toggleComments = () => {
-      showComments.value = !showComments.value;
-    };
-
-    const likePost = () => {
-      emit('like', props.post.id);
-    };
-
-    const submitComment = () => {
-      if (newComment.value.trim()) {
-        // 模拟评论数据
-        const comment = {
-          user: {
-            avatar: currentUserAvatar.value, // 使用当前评论用户的头像
-            name: '用户C' // 假设评论者名称
+      try {
+        const response = await fetch(`http://localhost:4050/get_user_info?uid=${uid}`, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
           },
-          content: newComment.value,
-          time: new Date().toLocaleString() // 获取当前时间作为评论时间
-        };
-
-        // 向父组件发送评论事件，父组件处理更新评论数据
-        emit('comment', props.post.id, comment);
-        localPost.comments.push(comment); // 更新本地评论列表
-        newComment.value = ''; // 清空输入框
+        });
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const data = await response.json();
+        if (data.code === 200) {
+          currentUserAvatar.value = data.data.avatar;  // 获取用户头像
+          console.log('hxiusnidcnsncneincenc',currentUserAvatar.value)
+          userName.value = data.data.uname;            // 获取用户名
+        } else {
+          console.error('获取用户信息失败:', data.message);
+        }
+      } catch (error) {
+        console.error('用户信息加载失败:', error);
       }
     };
 
-    // 如果 props.post 发生变化，更新 localPost
+    // 获取评论用户信息并更新评论
+    const fetchCommentUserInfo = async () => {
+      // 遍历每条评论，使用uid获取用户头像
+      for (let comment of localPost.comment) {
+        const uid = comment.uid; // 获取评论的用户ID
+        try {
+          const response = await fetch(`http://localhost:4050/get_user_info?uid=${uid}`, {
+            method: 'GET',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+          });
+
+          if (response.ok) {
+            const data = await response.json();
+            if (data.code === 200) {
+              // 将用户头像和用户名添加到评论对象中
+              comment.avatar = data.data.avatar;   // 设置头像
+              comment.userName = data.data.uname;  // 设置用户名
+              console.log({ ...props.post }); // 打印展开后的 props.post 对象
+            } else {
+              console.error(`获取用户头像失败：${data.message}`);
+            }
+          } else {
+            console.error('获取用户信息失败');
+          }
+        } catch (error) {
+          console.error('获取用户信息时发生错误:', error);
+        }
+      }
+    };
+    // 获取当前评论
+    const fetchComments = async () => {
+      console.log(props.post.id)
+      console.log(`http://localhost:4050/get_comments_by_pid?pid=${props.post.id}`);
+      try {
+        const response = await fetch(`http://localhost:4050/get_comments_by_pid?pid=${props.post.id}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+        if (response.ok) {
+          const data = await response.json();
+          localPost.comment = data.data; // 更新评论
+          await fetchCommentUserInfo();
+          console.log(data.data)
+        } else {
+          console.error('获取评论失败');
+        }
+      } catch (error) {
+        console.error('评论加载错误:', error);
+      }
+    };
+
+    // 切换评论显示
+    const toggleComments = async () => {
+      showComments.value = !showComments.value;
+      if (showComments.value) {
+        await fetchComments(); // 展示评论时加载评论
+      }
+    };
+
+    // 点赞
+    const likePost = async () => {
+      try {
+        const response = await fetch(`/api/like/${props.post.id}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            postId: props.post.id
+          })
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          if (data.code === 200) {
+            localPost.likes = data.likes; // 更新点赞数
+            emit('like', props.post.id, localPost.likes); // 通知父组件更新点赞数
+          } else {
+            console.error('点赞失败:', data.message);
+          }
+        } else {
+          console.error('点赞请求失败');
+        }
+      } catch (error) {
+        console.error('点赞请求失败:', error);
+      }
+    };
+
+    // 提交评论
+    const submitComment = async () => {
+      if (newComment.value.trim()) {
+        const comment = {
+          user: {
+            avatar: currentUserAvatar.value,
+            name: userName.value
+          },
+          content: newComment.value,
+          time: new Date().toLocaleString()
+        };
+
+        try {
+          const response = await fetch('/api/comments', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              uid: localStorage.getItem('uid'),
+              postId: props.post.id,
+              c_info: comment.content,
+              c_time: comment.time
+            })
+          });
+
+          if (response.ok) {
+            console.log('评论成功');
+            emit('comment', props.post.id, comment); // 通知父组件刷新评论
+            localPost.comments.push(comment); // 更新本地评论列表
+            newComment.value = ''; // 清空输入框
+          } else {
+            console.error('评论提交失败');
+          }
+        } catch (error) {
+          console.error('评论提交失败:', error);
+        }
+      }
+    };
+
+    // 监听post变化，更新评论
     watchEffect(() => {
       localPost.comments = [...props.post.comments];
+    });
+
+    // 页面加载时获取用户信息
+    onMounted(() => {
+      fetchUserInfo(); // 获取当前用户信息
     });
 
     return {
@@ -105,11 +253,14 @@ export default {
       toggleComments,
       likePost,
       submitComment,
-      currentUserAvatar // 返回评论用户头像的绑定
+      currentUserAvatar,
+      userName
     };
   }
 };
 </script>
+
+
 
 <style scoped>
 .post-card-container {
@@ -157,6 +308,8 @@ export default {
 .post-image {
   display: block; /* 确保图片作为块级元素显示，避免与文字并排 */
   margin-top: 10px; /* 图片和文字之间的间距 */
+  width: 400px;
+  height: 400px;
 }
 
 .actions-section {
@@ -217,7 +370,6 @@ export default {
   margin-top: 5px; /* 评论时间位于头像下方 */
 }
 </style>
-
   
   
   

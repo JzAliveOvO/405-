@@ -21,6 +21,7 @@
 import Header from '@/components/Header.vue';
 import PostCard from '@/components/PostCard.vue';
 import { ref, onMounted } from 'vue';
+import { ElMessage } from 'element-plus';
 
 export default {
   components: {
@@ -30,50 +31,78 @@ export default {
   setup() {
     const posts = ref([]);
 
-    // 模拟从数据库/API获取数据
+    // 从数据库/API获取说说数据
     const fetchPosts = async () => {
-      // 假设从后端获取数据
-      posts.value = [
-        {
-          id: 1,
-          user: {
-            avatar: 'https://via.placeholder.com/40',
-            name: '用户A'
+      try {
+        const response = await fetch(`http://localhost:4050/get_all_posts`, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
           },
-          content: '这是一条说说内容，带有文字和图片。',
-          image: 'https://via.placeholder.com/200',
-          publishTime: '2024-11-06 10:00:00',
-          comments: [],
-          likes: 0
-        },
-        {
-          id: 2,
-          user: {
-            avatar: 'https://via.placeholder.com/40',
-            name: '用户B'
-          },
-          content: '这是另一条说说内容，包含图片。',
-          image: 'https://via.placeholder.com/200',
-          publishTime: '2024-11-06 11:00:00',
-          comments: [],
-          likes: 0
-        },
-      ];
+        });
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const data = await response.json();
+        if (data.code === 200) {         //成功获取数据，对数据进行处理
+          console.log(data.message);
+          // 传递用户信息
+          posts.value = data.data;
+        } else {
+          ElMessage.error(data.message || "获取说说信息失败");
+        }
+      } catch (error) {
+        console.error('网络错误:', error);
+      }
     };
 
     onMounted(() => {
-      fetchPosts();
+      fetchPosts(); // 页面加载时调用 API 获取数据
     });
 
-    const handleComment = (postId, comment) => {
-      console.log(`评论说说 ${postId}: ${comment.content}`);
-      // 在实际项目中这里会有 API 调用来提交评论
+    // 发表评论
+    const handleComment = async (postId, comment) => {
+      try {
+        const response = await fetch('/api/comments', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            uid: localStorage.getItem('uid'), // 从localStorage获取当前登录用户的uid
+            postId: postId,
+            c_info: comment.content,
+            c_time: new Date().toLocaleString() // 获取当前时间
+          })
+        });
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const data = await response.json();
+        if (data.code === 200) {         //成功获取数据，对数据进行处理
+          console.log(`评论成功: ${comment.content}`);
+          fetchPosts(); // 刷新帖子列表及评论
+          posts.value = data.data;
+        } else {
+          ElMessage.error(data.message || '评论发送失败');
+        }
+      } catch (error) {
+        console.error('评论提交错误:', error);
+      }
     };
 
-    const handleLike = (postId) => {
-      const post = posts.value.find(p => p.id === postId);
-      if (post) {
-        post.likes += 1;
+    const handleLike = async (postId) => {
+      try {
+        const response = await fetch(`/api/like/${postId}`, {
+          method: 'POST',
+        });
+        if (response.ok) {
+          console.log(`点赞成功`);
+        } else {
+          console.error('点赞失败');
+        }
+      } catch (error) {
+        console.error('点赞请求失败:', error);
       }
     };
 
@@ -85,6 +114,8 @@ export default {
   }
 };
 </script>
+
+
 
 <style scoped>
 .main {

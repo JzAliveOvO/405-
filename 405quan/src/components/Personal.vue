@@ -33,6 +33,65 @@
             </el-card>
           </div>
 
+             <!-- 用于发表说说的卡片 -->
+             <div class="post-form-wrapper">
+              <el-card class="post-form-card" style="width: 850px; margin-bottom: 10px;">
+              <el-input
+                type="textarea"
+                v-model="newPostContent"
+                placeholder="有什么新鲜事想分享吗？"
+                rows="3"
+              />
+              <el-upload 
+                action="" 
+                list-type="picture-card" 
+                :auto-upload="false"
+                :on-change="handleSuccess">
+              <el-icon><Plus /></el-icon>
+
+              <template #file="{ file }">
+                <div>
+                  <img class="el-upload-list__item-thumbnail" :src="file.url" alt="" />
+                  <span class="el-upload-list__item-actions">
+                    <span
+                      class="el-upload-list__item-preview"
+                      @click="handlePictureCardPreview(file)"
+                    >
+                      <el-icon><zoom-in /></el-icon>
+                    </span>
+                    <span
+                      v-if="!disabled"
+                      class="el-upload-list__item-delete"
+                      @click="handleDownload(file)"
+                    >
+                      <el-icon><Download /></el-icon>
+                    </span>
+                    <span
+                      v-if="!disabled"
+                      class="el-upload-list__item-delete"
+                      @click="handleRemove(file)"
+                    >
+                      <el-icon><Delete /></el-icon>
+                    </span>
+                  </span>
+                </div>
+              </template>
+            </el-upload>
+
+            <el-dialog v-model="dialogVisible">
+              <img w-full :src="dialogImageUrl" alt="Preview Image" />
+            </el-dialog>
+              <el-button
+                type="primary"
+                @click="publishPost"
+                style="margin-top: 10px;"
+              >
+                发表说说
+              </el-button>
+            </el-card>
+
+          </div>
+
           <!-- 原来的说说卡片展示 -->
           <div class="card-wrapper">
             <el-card v-for="post in posts" :key="post.id" class="post-card" style="width: 850px; margin-bottom: 10px;">
@@ -49,47 +108,117 @@
 <script>
 import Header from '@/components/Header.vue';
 import PostCard from '@/components/PostCard.vue';
+import axios from 'axios'
 import { ref, onMounted } from 'vue';
+import { ElMessage,Delete, Download, Plus, ZoomIn} from 'element-plus';
 
 export default {
   components: {
     Header,
-    PostCard
+    PostCard,
   },
+  
   setup() {
+    const dialogImageUrl = ref('')
+    const dialogVisible = ref(false)
+    const disabled = ref(false)
     const posts = ref([]);
+    const newPostContent = ref(''); // 新增的说说内容
+    const uploadedImage = ref(null); // 上传的图片
+    const uid = localStorage.getItem('uid'); // 用户uid
+    const uname = ref('');
+    const uploadRef = ref(null);
 
-    // 模拟从数据库/API获取数据
+
+    const handleRemove = (file) => {
+      console.log(file)
+    }
+
+    const handlePictureCardPreview = (file) => {
+      dialogImageUrl.value = file.url
+      dialogVisible.value = true
+      console.log(dialogImageUrl.value,file.url)
+    }
+
+    const handleDownload = (file) => {
+      console.log(file)
+      console.log(file.raw)
+      dialogImageUrl.value = file.raw
+      console.log(dialogImageUrl.value)
+    }
+    const handleSuccess = (file) => {
+      dialogImageUrl.value = file.raw;
+      console.log(file.raw)
+      console.log(dialogImageUrl.value)
+    }
+    //检验uid是否存在
+    if (uid) {
+      console.log('用户ID:', uid);
+    } else {
+      console.log('没有找到用户ID');
+    }
     const fetchPosts = async () => {
-      posts.value = [
-        {
-          id: 1,
-          user: {
-            avatar: 'https://via.placeholder.com/40',
-            name: '用户A'
-          },
-          content: '这是一条说说内容，带有文字和图片。',
-          image: 'https://via.placeholder.com/200',
-          publishTime: '2024-11-06 10:00:00',
-          comments: [],
-          likes: 0
+      try {
+        const response = await fetch('http://localhost:4050/get_all_posts', {
+          method: 'GET',
+          headers: {
+          'Content-Type': 'application/json',
         },
-        {
-          id: 2,
-          user: {
-            avatar: 'https://via.placeholder.com/40',
-            name: '用户A'
-          },
-          content: '这是另一条说说内容，包含图片。',
-          image: 'https://via.placeholder.com/200',
-          publishTime: '2024-11-06 11:00:00',
-          comments: [],
-          likes: 0
-        },
-      ];
+      });
+      if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      const data = await response.json();
+      if (data.code === 200) {
+        console.log(data);
+        // 传递说说信息
+        const filteredPosts = data.data.filter(post => post.user.name === uname.value);
+        // 设置说说数据
+        posts.value = filteredPosts;
+        // 计算个人说说数量和个人总点赞数量
+        user.value.totalPosts = posts.value.length;
+        user.value.totalLikes = filteredPosts.reduce((total, post) => total + post.likes, 0);
+      } else {
+        ElMessage.error(data.message || "获取个人说说信息失败");
+      }
+      } catch (error) {
+        console.error('请求失败：', error);
+        ElMessage.error("获取个人说说信息失败!");
+      }
     };
+    // API获取用户数据
+    const getUserData = async () => {
+      if (!uid) {
+        ElMessage.error("用户丢失");
+        console.log('缺少uid');
+        return;
+      }
+      try {
+        const response = await fetch(`http://localhost:4050/get_user_info?uid=${uid}`, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        });
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const data = await response.json(); // 返回数据处理并且存储在 data 中
+        if (data.code === 200) { // 成功获取数据，对数据进行处理
+          console.log(data.message);
+          // 处理其他用户信息
+          uname.value = data.data.uname;
 
+        } else {
+          ElMessage.error(data.message || "获取用户信息失败");
+        }
+      } catch (error) {
+        console.error('请求失败：', error);
+        ElMessage.error("获取用户信息失败!");
+      }
+    };
     onMounted(() => {
+      getUserData();
       fetchPosts();
     });
 
@@ -104,21 +233,74 @@ export default {
       }
     };
 
-    // api获取用户信息数据
-    const user = {
-      avatar: 'https://via.placeholder.com/80',
-      name: '用户A',
-      signature: '人生短短几载，别忘了微笑。',
-      totalPosts: 123,
-      totalVisitors: 4567,
-      totalLikes: 789
+    const user = ref({
+      avatar:'',
+      name: '',
+      signature: '',
+      totalPosts: '',
+      totalVisitors:'',
+      totalLikes: ''
+    });
+
+    const publishPost = async () => {
+      if (!newPostContent.value) {
+        ElMessage.error('内容不能为空！');
+        return;
+      }
+
+      // 创建 FormData 对象并添加文本和图片字段
+      const formData = new FormData();
+      formData.append('content', newPostContent.value);
+      formData.append('uid', localStorage.getItem('uid'));
+      formData.append('image', dialogImageUrl.value);
+      console.log(dialogImageUrl.value);
+
+      // 调试：输出 FormData 内容
+      formData.forEach((value, key) => {
+        console.log(key, value);
+      });
+
+      try {
+        const response = await axios.post('http://localhost:4050/add_post', formData, {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+          },
+        });
+
+        if (response.data.code === 200) {
+          ElMessage.success('发表成功！');
+          newPostContent.value = ''; // 清空输入框
+          uploadedImage.value = null; // 清空图片
+        } else {
+          ElMessage.error('发布失败！');
+        }
+      } catch (error) {
+        ElMessage.error('发布失败！');
+      }
     };
+
+
+  
+
 
     return {
       posts,
       handleComment,
       handleLike,
-      user
+      user,
+      uid,
+      getUserData,
+      uname,
+      newPostContent,
+      uploadedImage,
+      publishPost,
+      dialogImageUrl,
+      dialogVisible,
+      disabled,
+      handleRemove,
+      handlePictureCardPreview,
+      handleDownload,
+      handleSuccess,
     };
   }
 };
@@ -212,5 +394,20 @@ export default {
   display: flex;
   flex-direction: column;
   align-items: center;
+}
+
+.post-form-wrapper {
+  width: 70%;
+  display: flex;
+  justify-content: center;
+  margin-bottom: 20px;
+}
+
+.post-form-card {
+  width: 100%;
+}
+
+.upload-demo {
+  margin-top: 10px;
 }
 </style>

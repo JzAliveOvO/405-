@@ -1,8 +1,7 @@
 <template>
   <div>
-    <el-header class="header">
-        <Header />
-      </el-header>
+    <!-- Header 部分 -->
+    <Header />
     
     <!-- 主容器 -->
     <el-container style="height: 100vh;">
@@ -54,27 +53,27 @@
             <el-card class="profile-card" shadow="hover">
               <div class="demo-basic--circle">
                 <div class="block">
-                  <el-avatar :size="150" :src="circleUrl" />
+                  <img :src="user.avatar" class="avatar2" alt="头像" />
                 </div>
               </div>
               <div class="profile-details" style="font-size: 18px; text-align: left;padding-left: 230px;">
                 <!-- 用户昵称 -->
                 <el-row>
-                  <el-col>昵称：{{ user.nickname }}</el-col> 
+                  <el-col>昵称：{{ user.uname }}</el-col> 
                 </el-row>
                 <!-- 用户个性签名 -->
                 <el-row>
-                  <el-col>个性签名：{{ user.signature }}</el-col> 
+                  <el-col>个性签名：{{ user.selfintroduction }}</el-col> 
                 </el-row>
                 <!-- 个人信息 -->
                 <el-row>
-                  <el-col>性别：{{ user.gender }}</el-col> 
+                  <el-col>性别：{{ user.sex }}</el-col> 
                 </el-row>
                 <el-row>
-                  <el-col>生日：{{ user.birthday }}</el-col> 
+                  <el-col>生日：{{ user.birth }}</el-col> 
                 </el-row>
                 <el-row>
-                  <el-col>绑定手机：{{ user.phone }}</el-col> 
+                  <el-col>绑定手机：{{ user.tel }}</el-col> 
                 </el-row>
               </div>
             </el-card>
@@ -101,22 +100,22 @@
     >
       <el-form>
         <el-form-item label="昵称" :label-width="'80px'">
-          <el-input v-model="user.nickname" placeholder="请输入昵称"></el-input>
+          <el-input v-model="user.uname" placeholder="请输入昵称"></el-input>
         </el-form-item>
         <el-form-item label="个性签名" :label-width="'80px'">
-          <el-input v-model="user.signature" placeholder="请输入个性签名"></el-input>
+          <el-input v-model="user.selfintroduction" placeholder="请输入个性签名"></el-input>
         </el-form-item>
         <el-form-item label="性别" :label-width="'80px'">
-          <el-select v-model="user.gender" placeholder="请选择性别">
+          <el-select v-model="user.sex" placeholder="请选择性别">
             <el-option label="男" value="男"></el-option>
             <el-option label="女" value="女"></el-option>
           </el-select>
         </el-form-item>
         <el-form-item label="生日" :label-width="'80px'">
-          <el-date-picker v-model="user.birthday" type="date" placeholder="请选择生日"></el-date-picker>
+          <el-date-picker v-model="user.birth" type="date" placeholder="请选择生日"></el-date-picker>
         </el-form-item>
         <el-form-item label="绑定手机" :label-width="'80px'">
-          <el-input v-model="user.phone" placeholder="请输入手机号"></el-input>
+          <el-input v-model="user.tel" placeholder="请输入手机号"></el-input>
         </el-form-item>
       </el-form>
       <span slot="footer" class="dialog-footer">
@@ -145,7 +144,7 @@
       </el-form>
       <span slot="footer" class="dialog-footer">
         <el-button @click="closePasswordDialog">取消</el-button>
-        <el-button type="primary" @click="savePassword">确定</el-button>
+        <el-button type="primary" @click="updatePassword">确定</el-button>
       </span>
     </el-dialog>
 
@@ -169,6 +168,7 @@
 
 <script>
 import { ref, reactive, onMounted } from 'vue';
+import { useRouter } from 'vue-router';
 import Header from '@/components/Header.vue';
 import { Avatar, Setting, Lock } from '@element-plus/icons-vue'; 
 import { ElMessage } from 'element-plus'
@@ -181,48 +181,124 @@ export default {
     Lock
   },
   setup() {
+    const router = useRouter();
     const value1 = ref(0);
     const activeMenu = ref('1'); 
     const isLogoutDialogVisible = ref(false); // 控制退出登录弹窗的显示
     const isEditDialogVisible = ref(false); // 控制编辑资料弹窗的显示
     const isPasswordDialogVisible = ref(false); // 控制密码管理弹窗的显示
-    // api获取用户信息
+    let a = '';
+    // 用户信息
     const user = reactive({
-      avatar: 'https://via.placeholder.com/100',
-      nickname: 'John',
-      signature: '11111',
-      gender: '男',
-      birthday: '1990-01-01',
-      phone: '13888888888',
+      uid:localStorage.getItem('uid'),
+      avatar: '',
+      uname: '',
+      selfintroduction: '',
+      password: '',
+      sex: '',
+      birth: '',
+      tel: '', 
     });
-
-
+    const uid = localStorage.getItem('uid'); // 用户uid
+    //检验uid是否存在
+    if (uid) {
+      console.log('用户ID:', uid);
+    } else {
+      console.log('没有找到用户ID');
+    }
     // 密码相关数据
     const passwordData = reactive({
       oldPassword: '',
       newPassword: '',
       confirmPassword: ''
     });
+    // API获取用户数据
+    const getUserData = async () => {
+      if (!uid) {
+        ElMessage.error("用户丢失");
+        console.log('缺少uid');
+        return;
+      }
+      try {
+        const response = await fetch(`http://localhost:4050/get_user_info?uid=${uid}`, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        });
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const data = await response.json(); // 返回数据处理并且存储在 data 中
+        if (data.code === 200) { // 成功获取数据，对数据进行处理
+          console.log(data.message);
+          // 传递用户信息
+          user.avatar = data.data.avatar; // 转换为 JPEG 格式
+          console.log(user.avatar);
+          // 处理其他用户信息
+          user.uname = data.data.uname;
+          user.selfintroduction = data.data.selfIntroduction; // 确保个性签名绑定
+          user.sex = data.data.sex;
+          user.birth = data.data.birth;
+          user.tel = data.data.tel;
+          user.password = data.data.password;
+          console.log(data.data);
 
-    // api获取user数据
-    const getUserData = () => {
-      user.avatar = 'https://via.placeholder.com/100';
-      user.nickname = 'John Doe';
-      user.signature = '111111';
-      user.gender = '男';
-      user.birthday = '1990-01-01';
-      user.phone = '13888888888';
+        } else {
+          ElMessage.error(data.message || "获取用户信息失败");
+        }
+      } catch (error) {
+        console.error('请求失败：', error);
+        ElMessage.error("获取用户信息失败!");
+      }
     };
-
-    // 初始触发
+    // 初始触发获取用户信息
     onMounted(() => {
       getUserData();
     });
-
      // 打开密码管理弹窗
-     const openPasswordDialog = () => {
+    const openPasswordDialog = () => {
       isPasswordDialogVisible.value = true;
       console.log(isPasswordDialogVisible)
+    };
+    // 关闭密码管理弹窗
+    const closePasswordDialog = () => {
+      isPasswordDialogVisible.value = false;
+    };
+    //修改密码api
+    const updatePassword = async () => {
+      if (passwordData.newPassword !== passwordData.confirmPassword || passwordData.oldPassword !== user.password ) {
+        console.log(passwordData,user.password);
+        ElMessage.error("密码错误或者两次密码不一致");
+        console.log('error');
+        return;
+      }
+      try {
+        const response = await fetch("http://localhost:4050/update_user_password", {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            uid: user.uid,
+            newPassword: passwordData.newPassword
+          })
+        });
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const data = await response.json();
+        console.log(data);
+        if (data.code === 200) {
+          isEditDialogVisible.value = false;  // 关闭编辑资料的弹窗
+          savePassword();
+        } else {
+          ElMessage.error(data.message || "修改失败");
+        }
+      } catch (error) {
+        console.error('请求失败：', error);
+        ElMessage.error("修改失败!");
+      }
     };
 
     // 打开编辑资料弹窗
@@ -236,24 +312,32 @@ export default {
       isEditDialogVisible.value = false;
     };
 
-      // 关闭密码管理弹窗
-    const closePasswordDialog = () => {
-      isPasswordDialogVisible.value = false;
-    };
-
-    // 保存修改后的用户数据
+    // 保存修改后的用户数据api
     const saveUserData = async () => {
+      user.avatar=a;
+      console.log(user);
       try {
-        // 这里可以调用API发送用户数据到后端进行更新
-        // 假设保存成功后返回响应，更新 UI
-        ElMessage.success('资料修改成功');
-        closeEditDialog();
-        console.log('保存的数据：', user);
-        // 在这里发送 API 请求更新数据库
-        // await api.updateUserProfile(user);
+        const response = await fetch("http://localhost:4050/update_user_info", {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(user),
+        });
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const data = await response.json();
+        if (data.code === 200) {
+          ElMessage.success("修改成功!");
+          isEditDialogVisible.value = false;  // 关闭编辑资料的弹窗
+          getUserData();  //再次获取用户信息--刷新数据
+        } else {
+          ElMessage.error(data.message || "修改失败");
+        }
       } catch (error) {
-        ElMessage.error('保存失败');
-        console.error(error);
+        console.error('请求失败：', error);
+        ElMessage.error("修改失败!");
       }
     };
 
@@ -267,30 +351,35 @@ export default {
     };
     // 确认退出登录的逻辑
     const confirmLogout = () => {
-      ElMessage('退出登录成功') 
-      // 在这里添加退出登录的逻辑，比如清除 token、重定向等
+    // 清空 localStorage 中的 uid
+      localStorage.removeItem('uid');
+      ElMessage('退出登录成功')  
       console.log('用户已退出');
       closeLogoutDialog(); // 关闭对话框
-      // 实际应用中可以在这里处理跳转到登录页面
+      // 跳转到首页页面
+      router.push({ name: 'Home' });
     };
 
     // 确认修改密码的逻辑
     const savePassword = () => {
-      ElMessage('修改密码成功') 
-      // 在这里添加退出登录的逻辑，比如清除 token、重定向等
-      console.log('密码已退出');
+      ElMessage('修改密码成功')  
+      console.log('密码已修改'); 
       closeLogoutDialog(); // 关闭对话框
-      // 实际应用中可以在这里处理跳转到登录页面
+      //退出登录
+      confirmLogout();
     };
 
     return { 
       value1,
       activeMenu,
       user,  
+      uid,
       passwordData,  
       isLogoutDialogVisible, 
       isEditDialogVisible,
       isPasswordDialogVisible,
+      updatePassword,
+      getUserData,
       openLogoutDialog,
       closeLogoutDialog,
       confirmLogout,
@@ -306,14 +395,6 @@ export default {
 </script>
 
 <style scoped>
-
-.header {
-  position: sticky;
-  top: 0;
-  z-index: 10;
-  margin: 0;
-  padding: 0;
-}
 .custom-card {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3); /* 自定义阴影效果 */
   border-radius: 10px; /* 可选，增加圆角 */
@@ -349,5 +430,17 @@ export default {
 
 .profile-details .el-col:first-child {
   font-weight: bold;
+}
+.avatar{
+  width: 50px;
+  height: 50px;
+  border-radius: 50%; /* 使图片圆形 */
+  object-fit: cover; /* 防止图片拉伸 */
+}
+.avatar2{
+  width:120px;
+  height:120px;
+  border-radius: 50%; /* 使图片圆形 */
+  object-fit: cover; /* 防止图片拉伸 */
 }
 </style>
