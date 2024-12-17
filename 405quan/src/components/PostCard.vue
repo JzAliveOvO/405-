@@ -57,6 +57,8 @@
 
 <script>
 import { ref, reactive, watchEffect, onMounted } from 'vue';
+import { ElMessage } from 'element-plus';  // 导入 ElMessage 组件
+
 
 export default {
   props: {
@@ -176,7 +178,11 @@ export default {
     const likePost = async () => {
 
       if (localPost.hasLiked) {
-        alert('您已经点赞过该说说');
+        ElMessage({
+          message: '您已经赞过该说说',
+          type: 'warning',  // 弹窗的类型，warning 是警告
+          duration: 2000,    // 弹窗显示的时长，单位是毫秒
+        });
         return;  // 阻止重复点赞
       }
 
