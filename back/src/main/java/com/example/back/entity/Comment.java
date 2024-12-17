@@ -3,6 +3,8 @@ package com.example.back.entity;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.baomidou.mybatisplus.annotation.TableField;
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 import java.util.Date;
 
 @TableName("comment") // 确保表名与数据库一致
@@ -18,10 +20,11 @@ public class Comment {
     private Integer pid; // 关联的说说 ID（外键）
 
     @TableField("c_info")
-    private String cInfo; // 评论内容
+    @JsonProperty("cInfo")
+    private String c_info; // 评论内容
 
     @TableField("ctime")
-    private Date cTime; // 评论时间
+    private Date ctime; // 评论时间
 
     // Getter 和 Setter 方法
     public Integer getCid() {
@@ -48,19 +51,19 @@ public class Comment {
         this.pid = pid;
     }
 
-    public String getCInfo() {
-        return cInfo;
+    public String getcInfo() {
+        return c_info;
     }
 
-    public void setCInfo(String cInfo) {
-        this.cInfo = cInfo;
+    public void setcInfo(String c_info) {
+        this.c_info = c_info;
     }
 
-    public Date getCTime() {
-        return cTime;
+    public Date getctime() {
+        return ctime;
     }
 
-    public void setCTime(Date cTime) {
-        this.cTime = cTime;
+    public void setctime(Date ctime) {
+        this.ctime = ctime;
     }
 }

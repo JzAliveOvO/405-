@@ -68,7 +68,8 @@ export default {
     const localPost = reactive({
       ...props.post,
       comment: [],
-      likes: props.post.likes || 0 // 确保点赞数存在，默认为0
+      likes: props.post.likes || 0 ,// 确保点赞数存在，默认为0
+      hasLiked: false,  // 添加字段来标记是否已点赞
     });
     const showComments = ref(false);
     const newComment = ref('');
@@ -135,29 +136,33 @@ export default {
         }
       }
     };
-    // 获取当前评论
+
+
     const fetchComments = async () => {
-      console.log(props.post.id)
+      console.log(props.post.id);
       console.log(`http://localhost:4050/get_comments_by_pid?pid=${props.post.id}`);
       try {
         const response = await fetch(`http://localhost:4050/get_comments_by_pid?pid=${props.post.id}`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-        if (response.ok) {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        });
+        if (response.status === 200) {
           const data = await response.json();
           localPost.comment = data.data; // 更新评论
           await fetchCommentUserInfo();
-          console.log(data.data)
+        } else if (response.status === 204) {
+          console.log('该说说没有评论');
+          localPost.comment = [];
         } else {
-          console.error('获取评论失败');
+          console.error('获取评论失败', response.status);
         }
       } catch (error) {
         console.error('评论加载错误:', error);
       }
     };
+
 
     // 切换评论显示
     const toggleComments = async () => {
@@ -169,14 +174,20 @@ export default {
 
     // 点赞
     const likePost = async () => {
+
+      if (localPost.hasLiked) {
+        alert('您已经点赞过该说说');
+        return;  // 阻止重复点赞
+      }
+
       try {
-        const response = await fetch(`/api/like/${props.post.id}`, {
+        const response = await fetch('http://localhost:4050/p_like', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json'
           },
           body: JSON.stringify({
-            postId: props.post.id
+            pid: props.post.id
           })
         });
 
@@ -184,6 +195,7 @@ export default {
           const data = await response.json();
           if (data.code === 200) {
             localPost.likes = data.likes; // 更新点赞数
+            localPost.hasLiked = true; 
             emit('like', props.post.id, localPost.likes); // 通知父组件更新点赞数
           } else {
             console.error('点赞失败:', data.message);
@@ -207,25 +219,25 @@ export default {
           content: newComment.value,
           time: new Date().toLocaleString()
         };
-
         try {
-          const response = await fetch('/api/comments', {
+          const response = await fetch('http://localhost:4050/add_comment', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-              uid: localStorage.getItem('uid'),
-              postId: props.post.id,
-              c_info: comment.content,
-              c_time: comment.time
+              cInfo: comment.content,  // 评论内容
+              uid: localStorage.getItem('uid'),  // 用户 ID
+              pid: props.post.id,  // 说说 ID
+              
             })
           });
 
           if (response.ok) {
             console.log('评论成功');
-            emit('comment', props.post.id, comment); // 通知父组件刷新评论
-            localPost.comments.push(comment); // 更新本地评论列表
+            localPost.comment.push(comment); // 更新本地评论列表
+            await fetchComments();
+            await fetchCommentUserInfo();
             newComment.value = ''; // 清空输入框
           } else {
             console.error('评论提交失败');

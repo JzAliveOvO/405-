@@ -20,6 +20,7 @@ public class Controller {
     private UserMapper userMapper;
     private static long i = 22051109;
     private static int x = 2;
+    private static int a = 3001;
 
     static void setI() {
         i+=1;
@@ -34,6 +35,13 @@ public class Controller {
     static long getPid() {
         return x;
     }
+    static void setC() {
+        a+=1;
+    }
+    static long getC() {
+        return a;
+    }
+
     @Autowired
     private PostMapper postMapper;
 
@@ -366,6 +374,30 @@ public class Controller {
         return response;
     }
 
+    @PostMapping("/add_comment")
+    public Map<String, Object> addComment(@RequestBody Comment c) {
+        Map<String, Object> response = new HashMap<>();
+        try {
+            setC();
+            c.setCid(a);
+            c.setctime(new Date());
+            // 保存评论到数据库
+            commentMapper.insert(c);
+
+            // 返回成功响应
+            response.put("code", 200);
+            response.put("message", "Comment added successfully!");
+        } catch (Exception e) {
+            response.put("code", 500);
+            response.put("message", "Failed to add comment");
+            e.printStackTrace();
+        }
+
+        return response;
+    }
+
+
+
     @PostMapping("/upload_post_picture")
     public Map<String, Object> uploadPostPicture(@RequestParam("picture") MultipartFile file, @RequestParam("pid") Integer pid) {
         Map<String, Object> response = new HashMap<>();
@@ -394,7 +426,6 @@ public class Controller {
         return response;
     }
 
-    // 获取某个说说的所有评论接口
     @GetMapping("/get_comments_by_pid")
     public Map<String, Object> getCommentsByPid(@RequestParam Integer pid) {
         Map<String, Object> response = new HashMap<>();
@@ -410,8 +441,8 @@ public class Controller {
                 for (Comment comment : comments) {
                     Map<String, Object> commentData = new HashMap<>();
                     commentData.put("uid", comment.getUid());  // 用户 ID
-                    commentData.put("c_info", comment.getCInfo());  // 评论内容
-                    commentData.put("c_time", sdf.format(comment.getCTime()));  // 评论时间
+                    commentData.put("c_info", comment.getcInfo());  // 评论内容
+                    commentData.put("c_time", sdf.format(comment.getctime()));  // 评论时间
                     commentList.add(commentData);
                 }
 
@@ -420,8 +451,10 @@ public class Controller {
                 response.put("message", "Get comments successfully!");
                 response.put("data", commentList);
             } else {
-                response.put("code", 404);
+                // 返回 204，表示没有评论内容
+                response.put("code", 204);
                 response.put("message", "No comments found for this post");
+                response.put("data", new ArrayList<>());  // 确保返回空数组
             }
         } catch (Exception e) {
             response.put("code", 500);
@@ -430,5 +463,27 @@ public class Controller {
         }
         return response;
     }
+
+    // 注册接口
+    @PostMapping("/p_like")
+    public Map<String, Object> registerUser(@RequestBody Post p) {
+        Map<String, Object> response = new HashMap<>();
+
+        try {
+            Post post = postMapper.selectById(p.getPid());
+            post.setLikes(post.getLikes() + 1);
+            postMapper.updateById(post);
+
+            response.put("code", 200);
+            response.put("message", "Post likes updated successfully");
+            response.put("likes", post.getLikes());  // 返回更新后的点赞数
+        } catch (Exception e) {
+            response.put("code", 500);
+            response.put("message", "Failed to get comments");
+            e.printStackTrace();
+        }
+        return response;
+    }
+
 
 }
