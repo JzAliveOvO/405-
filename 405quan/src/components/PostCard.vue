@@ -181,7 +181,7 @@ export default {
         ElMessage({
           message: '您已经赞过该说说',
           type: 'warning',  // 弹窗的类型，warning 是警告
-          duration: 2000,    // 弹窗显示的时长，单位是毫秒
+          duration: 3000,    // 弹窗显示的时长，单位是毫秒
         });
         return;  // 阻止重复点赞
       }
