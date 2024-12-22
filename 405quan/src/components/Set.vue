@@ -85,6 +85,14 @@
           <el-col :span="7">
             <el-card>
               <p>你可能感兴趣的人</p>
+              <div class="user-info">
+                <img class="avatar" src="./@src\assets\ava3.jpg" alt="User Avatar" />
+                <span class="user-name">{小圆同学}</span>
+              </div>
+              <div class="user-info">
+                <img class="avatar" src="./@src\assets\ava4.jpg" alt="User Avatar" />
+                <span class="user-name">{文心万言}</span>
+              </div>
             </el-card>
           </el-col>
         </el-row>
@@ -239,7 +247,8 @@ export default {
           user.uname = data.data.uname;
           user.selfintroduction = data.data.selfIntroduction; // 确保个性签名绑定
           user.sex = data.data.sex;
-          user.birth = data.data.birth;
+          const birthDate = data.data.birth.split('T')[0]; // 只取日期部分
+          user.birth = birthDate;
           user.tel = data.data.tel;
           user.password = data.data.password;
           console.log(data.data);
@@ -427,7 +436,20 @@ export default {
   margin-left: 120px;
   font-size: 20px;
 }
+.user-card {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+}
 
+.user-info {
+  display: flex;
+  align-items: center;
+}
+
+.user-name {
+  margin-left: 10px;
+}
 .profile-details .el-col:first-child {
   font-weight: bold;
 }
@@ -435,6 +457,8 @@ export default {
   width: 50px;
   height: 50px;
   border-radius: 50%; /* 使图片圆形 */
+  margin-right: 20px; /* 头像和用户名之间的间距 */
+  margin-left: 30px;
   object-fit: cover; /* 防止图片拉伸 */
 }
 .avatar2{

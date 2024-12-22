@@ -9,7 +9,20 @@
     </div>
     <div class="content-section">
       <p class="content">{{ post.content }}</p>
-      <img v-if="post.image" :src="post.image" alt="Post Image" class="post-image" />
+      
+      <!-- 图片展示部分 -->
+      <img 
+        v-if="post.image" 
+        :src="post.image" 
+        alt="Post Image" 
+        class="post-image"
+        @click="openModal"
+      />
+      
+      <!-- 模态框显示大图 -->
+      <div v-if="isModalOpen" class="modal" @click="closeModal">
+        <img :src="post.image" alt="Big Image" class="modal-image" />
+      </div>
     </div>
 
     <div class="actions-section" style="display: flex; justify-content: flex-end; align-items: center;">
@@ -20,7 +33,7 @@
 
       <!-- 点赞图标和点赞数 -->
       <div style="display: flex; align-items: center; cursor: pointer;" @click="likePost">
-        <el-icon style="font-size: 24px;">
+        <el-icon :style="{ fontSize: '24px', color: localPost.hasLiked ? '#f5a623' : '#d3d3d3' }">
           <StarFilled />
         </el-icon>
         <span style="margin-left: 5px;">{{ localPost.likes }}</span>
@@ -57,10 +70,14 @@
 
 <script>
 import { ref, reactive, watchEffect, onMounted } from 'vue';
-import { ElMessage } from 'element-plus';  // 导入 ElMessage 组件
-
+import { StarFilled,Comment} from '@element-plus/icons-vue';  // 导入 ElMessage 组件
+import { ElMessage } from 'element-plus';
 
 export default {
+  components: {
+    StarFilled,
+    Comment,
+  },
   props: {
     post: Object
   },
@@ -75,7 +92,17 @@ export default {
     });
     const showComments = ref(false);
     const newComment = ref('');
-    
+    const isModalOpen = ref(false); // 控制模态框是否显示
+    //console.log('图片：',props.post.image);
+    // 打开模态框
+    const openModal = async () => {
+      isModalOpen.value = true;
+    };
+
+    // 关闭模态框
+    const closeModal = async () => {
+      isModalOpen.value = false;
+    };
     // 获取用户信息
     const fetchUserInfo = async () => {
       const uid = localStorage.getItem('uid'); // 用户uid
@@ -97,7 +124,7 @@ export default {
         const data = await response.json();
         if (data.code === 200) {
           currentUserAvatar.value = data.data.avatar;  // 获取用户头像
-          console.log('hxiusnidcnsncneincenc',currentUserAvatar.value)
+          //console.log('hxiusnidcnsncneincenc',currentUserAvatar.value)
           userName.value = data.data.uname;            // 获取用户名
         } else {
           console.error('获取用户信息失败:', data.message);
@@ -139,7 +166,6 @@ export default {
       }
     };
 
-
     const fetchComments = async () => {
       console.log(props.post.id);
       console.log(`http://localhost:4050/get_comments_by_pid?pid=${props.post.id}`);
@@ -164,7 +190,6 @@ export default {
         console.error('评论加载错误:', error);
       }
     };
-
 
     // 切换评论显示
     const toggleComments = async () => {
@@ -253,13 +278,9 @@ export default {
         }
       }
     };
-
-    // 监听post变化，更新评论
     watchEffect(() => {
       localPost.comments = [...props.post.comments];
     });
-
-    // 页面加载时获取用户信息
     onMounted(() => {
       fetchUserInfo(); // 获取当前用户信息
     });
@@ -272,13 +293,15 @@ export default {
       likePost,
       submitComment,
       currentUserAvatar,
-      userName
+      userName,
+      openModal,
+      closeModal,
+      isModalOpen
+
     };
   }
 };
 </script>
-
-
 
 <style scoped>
 .post-card-container {
@@ -326,8 +349,9 @@ export default {
 .post-image {
   display: block; /* 确保图片作为块级元素显示，避免与文字并排 */
   margin-top: 10px; /* 图片和文字之间的间距 */
-  width: 400px;
-  height: 400px;
+  width: 50%;           /* 图片宽度最大为父容器宽度 */
+  height: auto;          /* 高度自动，根据宽度调整 */
+  object-fit: contain;
 }
 
 .actions-section {
@@ -374,18 +398,41 @@ export default {
 
 .comment-user-name {
   font-weight: bold;
-  margin-right: 8px; /* 用户名与评论内容的间距 */
+  margin-right: 8px; 
 }
-
 .comment-content {
   font-size: 14px;
   color: #333;
 }
-
 .comment-time {
   font-size: 12px;
   color: #888;
-  margin-top: 5px; /* 评论时间位于头像下方 */
+  margin-top: 5px; 
+}
+/* 模态框样式 */
+.modal {
+  position: fixed;       /* 固定在屏幕上 */
+  top: 0;
+  left: 0;
+  width: 100vw;          /* 覆盖整个视口 */
+  height: 100vh;
+  display: flex;         /* 使用flex布局 */
+  justify-content: center; /* 水平居中 */
+  align-items: center;   /* 垂直居中 */
+  background: rgba(0, 0, 0, 0.8);  /* 半透明黑色背景 */
+  z-index: 1000;         /* 让模态框在最上层 */
+  cursor: pointer;      /* 鼠标变为点击指针 */
+}
+
+/* 模态框内的大图 */
+.modal-image {
+  max-width: 90%;        /* 最大宽度为90% */
+  max-height: 90%;       /* 最大高度为90% */
+  object-fit: contain;   /* 保持图片的原始比例 */
+  border-radius: 8px;    /* 可选的圆角效果 */
+}
+.modal:hover {
+  cursor: pointer;
 }
 </style>
   

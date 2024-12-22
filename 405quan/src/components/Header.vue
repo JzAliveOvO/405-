@@ -12,13 +12,6 @@
         </div>
       </div>
 
-      <!-- 搜索框 -->
-      <el-input
-        class="search-input"
-        placeholder="搜索..."
-        v-model="searchQuery"
-        suffix-icon="el-icon-search"
-      />
 
       <!-- 右侧图标 -->
       <div class="right-icons" style="margin-right: 10px;">

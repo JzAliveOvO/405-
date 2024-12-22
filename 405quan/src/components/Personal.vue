@@ -32,8 +32,9 @@
               </div>
             </el-card>
           </div>
-
+             <el-row>
              <!-- 用于发表说说的卡片 -->
+              <el-col>
              <div class="post-form-wrapper">
               <el-card class="post-form-card" style="width: 850px; margin-bottom: 10px;">
               <el-input
@@ -91,13 +92,16 @@
             </el-card>
 
           </div>
-
+          </el-col>
+          <el-col>
           <!-- 原来的说说卡片展示 -->
           <div class="card-wrapper">
             <el-card v-for="post in posts" :key="post.id" class="post-card" style="width: 850px; margin-bottom: 10px;">
               <PostCard :post="post" @comment="handleComment" @like="handleLike" />
             </el-card>
           </div>
+        </el-col>
+      </el-row>
         </div>
       </el-main>
     </el-container>
@@ -108,7 +112,7 @@
 <script>
 import Header from '@/components/Header.vue';
 import PostCard from '@/components/PostCard.vue';
-import axios from 'axios'
+import axios from 'axios';
 import { ref, onMounted } from 'vue';
 import { ElMessage,Delete, Download, Plus, ZoomIn} from 'element-plus';
 
@@ -151,13 +155,12 @@ export default {
       console.log(file.raw)
       console.log(dialogImageUrl.value)
     }
-    //检验uid是否存在
-    if (uid) {
-      console.log('用户ID:', uid);
-    } else {
-      console.log('没有找到用户ID');
-    }
     const fetchPosts = async () => {
+      if (!uid) {
+        ElMessage.error("用户丢失");
+        console.log('缺少uid');
+        return;
+      }
       try {
         const response = await fetch('http://localhost:4050/get_all_posts', {
           method: 'GET',
@@ -171,10 +174,12 @@ export default {
       const data = await response.json();
       if (data.code === 200) {
         console.log(data);
+        console.log(uid);
         // 传递说说信息
         const filteredPosts = data.data.filter(post => post.user.name === uname.value);
         // 设置说说数据
         posts.value = filteredPosts;
+        console.log(posts.value);
         // 计算个人说说数量和个人总点赞数量
         user.value.totalPosts = posts.value.length;
         user.value.totalLikes = filteredPosts.reduce((total, post) => total + post.likes, 0);
@@ -194,6 +199,7 @@ export default {
         return;
       }
       try {
+        console.log(uid);
         const response = await fetch(`http://localhost:4050/get_user_info?uid=${uid}`, {
           method: 'GET',
           headers: {
@@ -207,14 +213,17 @@ export default {
         if (data.code === 200) { // 成功获取数据，对数据进行处理
           console.log(data.message);
           // 处理其他用户信息
-          uname.value = data.data.uname;
-
+          uname.value=data.data.uname;
+          user.value.name = data.data.uname;
+          user.value.avatar = data.data.avatar;
+          console.log(user.value.avatar);
+          console.log(user.value.name);
         } else {
           ElMessage.error(data.message || "获取用户信息失败");
         }
       } catch (error) {
         console.error('请求失败：', error);
-        ElMessage.error("获取用户信息失败!");
+        ElMessage.error("获取用户信息失败!"); 
       }
     };
     onMounted(() => {
@@ -238,7 +247,7 @@ export default {
       name: '',
       signature: '',
       totalPosts: '',
-      totalVisitors:'',
+      totalVisitors:20,
       totalLikes: ''
     });
 
@@ -253,7 +262,7 @@ export default {
       formData.append('content', newPostContent.value);
       formData.append('uid', localStorage.getItem('uid'));
       formData.append('image', dialogImageUrl.value);
-      console.log(dialogImageUrl.value);
+      console.log('说说图片',dialogImageUrl.value);
 
       // 调试：输出 FormData 内容
       formData.forEach((value, key) => {
@@ -270,7 +279,10 @@ export default {
         if (response.data.code === 200) {
           ElMessage.success('发表成功！');
           newPostContent.value = ''; // 清空输入框
-          uploadedImage.value = null; // 清空图片
+          uploadedImage.value = null; 
+          dialogImageUrl.value = null;
+          dialogVisible.value = false;  // 隐藏图片预览对话框
+          fetchPosts();
         } else {
           ElMessage.error('发布失败！');
         }
@@ -278,10 +290,6 @@ export default {
         ElMessage.error('发布失败！');
       }
     };
-
-
-  
-
 
     return {
       posts,
@@ -308,8 +316,10 @@ export default {
 
 <style scoped>
 .main {
+  padding-left: 3%;
+  padding-bottom: 50vh;
   width: 100%;
-  height: 90%; /* 减去 Header 的高度 */
+  height: 50%; /* 减去 Header 的高度 */
   background-color: #f0f0f0;
   display: flex;
   justify-content: center;
@@ -318,6 +328,7 @@ export default {
 }
 
 .card-wrapper {
+  padding-left: 6%;
   width: 70%;
   display: flex;
   flex-direction: column;
@@ -397,7 +408,8 @@ export default {
 }
 
 .post-form-wrapper {
-  width: 70%;
+  padding-left: 2%;
+  width: 75%;
   display: flex;
   justify-content: center;
   margin-bottom: 20px;
@@ -405,6 +417,7 @@ export default {
 
 .post-form-card {
   width: 100%;
+  margin-bottom: 10px;
 }
 
 .upload-demo {
