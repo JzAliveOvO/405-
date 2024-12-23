@@ -216,8 +216,6 @@ export default {
           uname.value=data.data.uname;
           user.value.name = data.data.uname;
           user.value.avatar = data.data.avatar;
-          console.log(user.value.avatar);
-          console.log(user.value.name);
         } else {
           ElMessage.error(data.message || "获取用户信息失败");
         }
